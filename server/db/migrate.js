@@ -2,7 +2,6 @@ require('dotenv').config();
 const pool = require('./pool');
 
 const schema = `
--- Questions registry
 CREATE TABLE IF NOT EXISTS questions (
   id         TEXT PRIMARY KEY,
   tag        TEXT NOT NULL,
@@ -10,7 +9,6 @@ CREATE TABLE IF NOT EXISTS questions (
   difficulty TEXT NOT NULL DEFAULT 'medium'
 );
 
--- Every submission (session_id is a client-generated UUID, display_name is optional)
 CREATE TABLE IF NOT EXISTS submissions (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id   TEXT NOT NULL,
@@ -25,7 +23,6 @@ CREATE TABLE IF NOT EXISTS submissions (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Best result per session per question
 CREATE TABLE IF NOT EXISTS progress (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id   TEXT NOT NULL,
@@ -39,15 +36,14 @@ CREATE TABLE IF NOT EXISTS progress (
   UNIQUE(session_id, question_id)
 );
 
--- Leaderboard: rank sessions by questions solved
 CREATE OR REPLACE VIEW leaderboard AS
 SELECT
   session_id,
-  MAX(display_name)                                         AS display_name,
-  COUNT(DISTINCT question_id) FILTER (WHERE completed)     AS solved,
-  COALESCE(SUM(best_score), 0)                             AS total_score,
-  COALESCE(SUM(attempts), 0)                               AS total_attempts,
-  MAX(updated_at)                                          AS last_active
+  MAX(display_name)                                     AS display_name,
+  COUNT(DISTINCT question_id) FILTER (WHERE completed)  AS solved,
+  COALESCE(SUM(best_score), 0)                          AS total_score,
+  COALESCE(SUM(attempts), 0)                            AS total_attempts,
+  MAX(updated_at)                                       AS last_active
 FROM progress
 GROUP BY session_id
 ORDER BY solved DESC, total_score DESC, last_active ASC;
@@ -64,12 +60,11 @@ async function migrate() {
     await client.query(schema);
     console.log('✓ Migration complete');
   } catch (err) {
-    console.error('Migration failed:', err);
+    console.error('Migration failed:', err.message);
     process.exit(1);
   } finally {
     client.release();
-    await pool.end();
   }
 }
 
-migrate();
+migrate().then(() => process.exit(0));

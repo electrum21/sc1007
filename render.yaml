@@ -3,7 +3,7 @@ services:
     name: dsa-app
     runtime: node
     buildCommand: npm install
-    startCommand: npm run db:migrate && npm run db:seed && npm start
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
